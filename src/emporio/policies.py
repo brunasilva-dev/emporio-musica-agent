@@ -23,15 +23,15 @@ FUSO_LOJA = ZoneInfo("America/Campo_Grande")  # UTC-4, uma hora a menos que Bras
 
 # Número da seção no PDF -> (chave usada pelo LLM, descrição para o LLM escolher)
 SECOES = {
-    1: ("sobre_a_loja", "endereço, telefone, e-mail, CNPJ, história e o que a loja vende (apenas instrumentos, sem acessórios)"),
-    2: ("horario_de_funcionamento", "dias e horários de atendimento da loja e do WhatsApp"),
-    3: ("formas_de_pagamento", "PIX, cartão, boleto, desconto no PIX e regras de parcelamento"),
-    4: ("trocas_e_devolucoes", "arrependimento (7 dias), troca por defeito, troca por preferência, itens sem troca"),
-    5: ("frete_e_entregas", "frete grátis, taxas, prazos, Correios/Jadlog, rastreamento, avarias"),
-    6: ("promocoes", "calendário de campanhas e regras de promoções (não cumulativas, sem reserva de preço)"),
-    7: ("diretrizes_de_atendimento", "tom de voz, escopo, fluxo de atendimento, produto esgotado, reclamações"),
-    8: ("garantia", "garantia legal de 90 dias, garantia do fabricante e o que não é coberto"),
-    9: ("privacidade_lgpd", "uso de dados pessoais, LGPD e pedido de exclusão de dados"),
+    1: ("sobre_a_loja", "endereço, contato, o que a loja vende"),
+    2: ("horario_de_funcionamento", "horários"),
+    3: ("formas_de_pagamento", "PIX, cartão, boleto, parcelamento"),
+    4: ("trocas_e_devolucoes", "arrependimento, defeito, preferência"),
+    5: ("frete_e_entregas", "frete, prazos, rastreio"),
+    6: ("promocoes", "campanhas e regras"),
+    7: ("diretrizes_de_atendimento", "escopo, esgotados, reclamações"),
+    8: ("garantia", "legal e de fabricante"),
+    9: ("privacidade_lgpd", "dados pessoais, exclusão"),
 }
 
 # Notas de curadoria: inconsistências encontradas no PDF e a interpretação adotada.

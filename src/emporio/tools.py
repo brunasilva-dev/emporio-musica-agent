@@ -29,18 +29,17 @@ TOOLS = [
         "function": {
             "name": "buscar_produtos",
             "description": (
-                "Busca instrumentos no catálogo por texto, categoria e faixa de preço. Use para perguntas "
-                "abertas como 'quais violões até R$ 1000?' ou 'tem ukulele elétrico?'. Retorna preço, "
-                "promoção ativa, preço no PIX, parcelamento e disponibilidade já calculados."
+                "Busca aberta no catálogo (ex.: 'violões até R$ 1000'). Retorna preço, promoção, PIX, "
+                "parcelamento e disponibilidade já calculados."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "termo": {"type": "string", "description": "Palavras-chave: marca, modelo ou característica (ex.: 'yamaha nylon', '7 cordas', 'elétrico')."},
-                    "categoria": {"type": "string", "description": "Tipo de instrumento (ex.: 'violão', 'guitarra', 'ukulele', 'baixo', 'bateria', 'teclado')."},
-                    "preco_min": {"type": "number", "description": "Preço mínimo em reais."},
-                    "preco_max": {"type": "number", "description": "Preço máximo em reais."},
-                    "somente_disponiveis": {"type": "boolean", "description": "Padrão true. Use false só se o cliente quiser ver também itens esgotados."},
+                    "termo": {"type": "string", "description": "Marca, modelo ou característica (ex.: 'yamaha nylon')."},
+                    "categoria": {"type": "string", "description": "Tipo de instrumento (ex.: 'violão', 'ukulele')."},
+                    "preco_min": {"type": "number"},
+                    "preco_max": {"type": "number"},
+                    "somente_disponiveis": {"type": "boolean", "description": "Padrão true; false inclui esgotados."},
                 },
             },
         },
@@ -50,13 +49,12 @@ TOOLS = [
         "function": {
             "name": "obter_produto",
             "description": (
-                "Detalhes de UM produto específico pelo nome (aceita nome aproximado, ex.: 'Takamine GD20') "
-                "ou ID. Retorna preço, promoção, parcelamento, disponibilidade, especificações e, se estiver "
-                "indisponível, alternativas parecidas."
+                "Detalhes de um produto pelo nome aproximado ou ID. Inclui preço, promoção, parcelamento, "
+                "disponibilidade, especificações e alternativas se indisponível."
             ),
             "parameters": {
                 "type": "object",
-                "properties": {"nome_ou_id": {"type": "string", "description": "Nome do modelo ou ID do produto."}},
+                "properties": {"nome_ou_id": {"type": "string"}},
                 "required": ["nome_ou_id"],
             },
         },
@@ -65,7 +63,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "listar_categorias",
-            "description": "Lista as categorias de instrumentos da loja e quantos produtos há disponíveis em cada uma.",
+            "description": "Categorias da loja e quantidade de produtos disponíveis em cada.",
             "parameters": {"type": "object", "properties": {}},
         },
     },
@@ -74,14 +72,14 @@ TOOLS = [
         "function": {
             "name": "consultar_pedido",
             "description": (
-                "Consulta status, itens, rastreio e prazos de troca/devolução de pedidos. EXIGE o e-mail ou "
-                "telefone cadastrado do cliente. Peça esses dados ao cliente antes de chamar; nunca invente."
+                "Status, itens, rastreio e prazos de troca/devolução de pedidos. Exige e-mail ou telefone "
+                "cadastrado informado pelo cliente."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "contato": {"type": "string", "description": "E-mail ou telefone cadastrado informado pelo cliente."},
-                    "numero_pedido": {"type": "integer", "description": "Número do pedido, se o cliente informou."},
+                    "contato": {"type": "string"},
+                    "numero_pedido": {"type": "integer"},
                 },
                 "required": ["contato"],
             },
@@ -92,8 +90,8 @@ TOOLS = [
         "function": {
             "name": "consultar_politica",
             "description": (
-                "Consulta o manual oficial de políticas da loja. Use para regras e informações institucionais. "
-                "Seções: " + "; ".join(f"'{chave}': {desc}" for chave, desc in SECOES.values())
+                "Manual de políticas da loja (regras e informações institucionais). Seções: "
+                + "; ".join(f"{chave} ({desc})" for chave, desc in SECOES.values())
             ),
             "parameters": {
                 "type": "object",
@@ -107,17 +105,16 @@ TOOLS = [
         "function": {
             "name": "encaminhar_para_atendente",
             "description": (
-                "Registra o caso para a equipe humana. Use para reclamações, pedidos atrasados ou parados, "
-                "divergência de valores, pedido de exclusão de dados (LGPD), negociação de preço, ou quando "
-                "o cliente pedir para falar com uma pessoa."
+                "Registra o caso para a equipe humana (reclamação, atraso, divergência de valor, LGPD, "
+                "negociação ou pedido para falar com uma pessoa)."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "motivo": {"type": "string", "enum": ["reclamacao", "atraso_pedido", "divergencia_valor", "lgpd", "negociacao", "pedido_do_cliente", "outro"]},
-                    "resumo": {"type": "string", "description": "Resumo objetivo do caso para o atendente."},
-                    "contato": {"type": "string", "description": "Contato do cliente, se informado."},
-                    "numero_pedido": {"type": "integer", "description": "Número do pedido relacionado, se houver."},
+                    "resumo": {"type": "string"},
+                    "contato": {"type": "string"},
+                    "numero_pedido": {"type": "integer"},
                 },
                 "required": ["motivo", "resumo"],
             },

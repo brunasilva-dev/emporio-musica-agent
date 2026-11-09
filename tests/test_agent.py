@@ -135,3 +135,29 @@ def test_historico_persistido(tmp_path):
     novo = Agente(provedores=[GEMINI], clientes={"gemini": ClienteFalso([])})
     novo.carregar(arquivo)
     assert novo.historico == agente.historico
+
+
+def test_historico_compacto_remove_ferramentas_de_turnos_anteriores():
+    cliente = ClienteFalso([
+        _msg_ferramenta("obter_produto", {"nome_ou_id": "Takamine GD20"}),
+        _msg_texto("Custa R$ 2.199,00."),
+        _msg_texto("De nada!"),
+    ])
+    agente = Agente(provedores=[GROQ], clientes={"groq": cliente})
+    agente.responder("Quanto custa o Takamine GD20?")
+    agente.responder("Obrigado!")
+    enviadas = cliente.chamadas[-1]["messages"]
+    assert [m["role"] for m in enviadas] == ["system", "user", "assistant", "user"]
+    assert len(agente.historico) == 6  # o histórico salvo continua completo
+
+
+def test_rate_limit_espera_o_tempo_pedido(monkeypatch):
+    esperas = []
+    monkeypatch.setattr(agente_mod.time, "sleep", lambda s: esperas.append(s))
+    erro = _erro(429)
+    erro.message = "Rate limit reached. Please try again in 21.6s."
+    monkeypatch.setattr(type(erro), "__str__", lambda self: self.message)
+    groq = ClienteFalso([erro, _msg_texto("Oi!")])
+    agente = Agente(provedores=[GROQ], clientes={"groq": groq})
+    assert agente.responder("oi").texto == "Oi!"
+    assert esperas == [22.1]

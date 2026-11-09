@@ -9,6 +9,7 @@ Fluxo de cada turno:
 from __future__ import annotations
 
 import json
+import re
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -24,6 +25,7 @@ MAX_PASSOS = 6            # máximo de rodadas de ferramentas por mensagem do cl
 TENTATIVAS_POR_PROVEDOR = 2
 ESPERA_BASE_S = 2
 TIMEOUT_S = 20
+ESPERA_MAX_429_S = 30     # se o provedor pedir para esperar até isso (rate limit), esperamos
 PAUSA_PROVEDOR_S = 120    # circuit breaker: provedor que falhou fica de fora por 2 minutos
 ARQUIVO_ERROS = RAIZ / "historico" / "erros.log"
 
@@ -81,7 +83,7 @@ class Agente:
                         "role": "tool",
                         "tool_call_id": chamada.id,
                         "name": nome,  # o Gemini usa o nome para montar a functionResponse
-                        "content": json.dumps(saida, ensure_ascii=False),
+                        "content": json.dumps(saida, ensure_ascii=False, separators=(",", ":")),
                     })
                 continue
 
@@ -124,7 +126,7 @@ class Agente:
         ativos = [p for p in self.provedores if self._pausado_ate.get(p.nome, 0) <= agora]
         for provedor in ativos or self.provedores:
             mensagens = [{"role": "system", "content": montar_prompt_sistema()}]
-            mensagens += self._adaptar_historico(provedor.nome)
+            mensagens += self._adaptar_historico(provedor.nome, self._historico_compacto())
             for tentativa in range(TENTATIVAS_POR_PROVEDOR):
                 try:
                     resposta = self.clientes[provedor.nome].chat.completions.create(
@@ -141,10 +143,46 @@ class Agente:
                     self._registrar_erro(provedor.nome, tentativa, f"HTTP {e.status_code}", str(e))
                     if e.status_code not in (429, 500, 502, 503, 504):
                         break  # erro não temporário (ex.: 400/401): vai direto para o próximo provedor
+                    espera = self._espera_sugerida(e)
+                    if espera is not None:
+                        if espera > ESPERA_MAX_429_S:
+                            break  # cota longa (ex.: diária): não adianta esperar, vai para o fallback
+                        if tentativa < TENTATIVAS_POR_PROVEDOR - 1:
+                            time.sleep(espera + 0.5)
+                        continue
                 if tentativa < TENTATIVAS_POR_PROVEDOR - 1:
                     time.sleep(ESPERA_BASE_S * (2 ** tentativa))
             self._pausado_ate[provedor.nome] = time.monotonic() + PAUSA_PROVEDOR_S
         return None
+
+    @staticmethod
+    def _espera_sugerida(erro: APIStatusError) -> float | None:
+        """Tempo de espera pedido pelo provedor em erros 429 (header Retry-After ou texto do erro)."""
+        if erro.status_code != 429:
+            return None
+        cabecalho = erro.response.headers.get("retry-after") if erro.response is not None else None
+        try:
+            if cabecalho:
+                return float(cabecalho)
+        except ValueError:
+            pass
+        m = re.search(r"try again in (?:(\d+)m)?([\d.]+)s", str(erro))
+        if m:
+            return int(m.group(1) or 0) * 60 + float(m.group(2))
+        return None
+
+    def _historico_compacto(self) -> list[dict]:
+        """Economia de tokens: turnos anteriores vão só com as falas (cliente e Duda).
+
+        Os resultados brutos das ferramentas ficam apenas no turno atual. O que importava
+        deles já está resumido nas respostas que a Duda deu ao cliente.
+        """
+        ultimo_usuario = max((i for i, m in enumerate(self.historico) if m["role"] == "user"), default=0)
+        anteriores = [
+            m for m in self.historico[:ultimo_usuario]
+            if m["role"] == "user" or (m["role"] == "assistant" and not m.get("tool_calls"))
+        ]
+        return anteriores + self.historico[ultimo_usuario:]
 
     def _registrar_erro(self, provedor: str, tentativa: int, tipo: str, detalhe: str) -> None:
         linha = f"{provedor} (tentativa {tentativa + 1}): {tipo} - {detalhe[:400]}"
@@ -173,10 +211,10 @@ class Agente:
             mensagem["content"] = msg.content
         return mensagem
 
-    def _adaptar_historico(self, provedor: str) -> list[dict]:
+    def _adaptar_historico(self, provedor: str, historico: list[dict] | None = None) -> list[dict]:
         """Ajusta o histórico ao provedor (necessário quando há fallback no meio da conversa)."""
         adaptado = []
-        for m in self.historico:
+        for m in (self.historico if historico is None else historico):
             if m.get("tool_calls"):
                 m = {**m, "tool_calls": [dict(c) for c in m["tool_calls"]]}
                 if provedor == "gemini":
