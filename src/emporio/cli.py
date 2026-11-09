@@ -53,7 +53,12 @@ def main() -> None:
     args = parser.parse_args()
 
     console = Console()
-    agente = Agente()
+    try:
+        agente = Agente()
+    except RuntimeError as e:  # ex.: nenhuma chave configurada no .env
+        console.print(f"[bold red]Erro de configuração:[/] {e}")
+        console.print("[dim]Veja a seção 'Como rodar' do README.[/]")
+        return
     arquivo_sessao = PASTA_HISTORICO / f"{args.sessao}.json"
     debug = args.debug
 
