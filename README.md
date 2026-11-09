@@ -1,5 +1,7 @@
 # Duda: agente de atendimento da Empório da Música
 
+🇺🇸 [English version](README.en.md)
+
 Protótipo de agente de atendimento por mensagens de texto para a **Empório da Música**, loja fictícia de instrumentos musicais em Campo Grande/MS. Desenvolvido como desafio técnico para a vaga de AI Engineer da Artefact.
 
 A **Duda** responde clientes no tom da loja, consulta dados em tempo real (catálogo, preços, promoções, estoque e pedidos), aplica as regras do manual de políticas, encaminha casos para a equipe humana e recusa com educação o que está fora do escopo.
